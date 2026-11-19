@@ -1,91 +1,267 @@
-SET UP (one time)
-1. npm install
-2. npx wrangler login
-3. npx wrangler kv namespace create SONGS
-   -> Say "yes" when Wrangler asks to add it to your config, and use the binding name SONGS.
-   -> For "connect to the remote resource for local dev?" answer N.
-   -> Open wrangler.jsonc: there must be only ONE entry with "binding": "SONGS" and a real id.
-4. npm run deploy
-5. npx wrangler secret put ADMIN_PASSWORD
-   -> Type a password you will remember. This is the password for adding/deleting songs.
+# Music Library
 
-WHERE YOUR SONGS LIVE (important)
-- All songs are stored ON THE WEBSITE (Cloudflare KV), not inside the app files.
-- "npm run deploy" only updates the app itself. It NEVER adds, changes or removes songs,
-  even when the public/songs folder is empty. Deploy as often as you like.
+A personal music player powered by **Cloudflare Workers** and **Cloudflare KV**. Upload your MP3 collection, organize it into groups, and listen online or offline from your computer or phone.
 
-ADD MANY SONGS AT ONCE (from your computer)
-- Put MP3 files into public/songs. Subfolder name = group. Example:
-    public/songs/Rock/song.mp3  ->  shown in the group "Rock"
-    public/songs/song.mp3       ->  shown in the group "Other"
-- Run "npm run deploy" once. The files are uploaded to the website automatically
-  (this can take a while for many songs).
-- The folder is only an "add these songs" queue: after importing you can empty it,
-  the songs stay on the website. Files already imported are skipped on the next deploy.
-- Want a changed file with the same name on the website again? Delete the song on the
-  website first, then deploy.
-- Limit: each file up to 25 MiB.
+## Contents
 
-RESTORE YOUR MUSIC / MOVE IT TO ANOTHER COMPUTER
-1. Copy your MP3 files into public/songs (subfolder = group name).
-2. npm run deploy  ->  they are uploaded to the website.
-3. Done. You can empty public/songs now; the songs stay on the website.
+- [Getting started](#getting-started)
+- [Where your music is stored](#where-your-music-is-stored)
+- [Bulk upload from your computer](#bulk-upload-from-your-computer)
+- [Manage songs and groups](#manage-songs-and-groups)
+- [Group images](#group-images)
+- [Player features](#player-features)
+- [Listen offline](#listen-offline)
+- [Install as an app](#install-as-an-app)
+- [Deploying updates](#deploying-updates)
+- [Run locally](#run-locally)
+- [Free-plan limits](#free-plan-limits)
+- [Keyboard shortcuts](#keyboard-shortcuts)
 
-ADD AND DELETE SONGS ON THE WEBSITE (needs internet)
-- Open your site address (printed by SET UP step 4).
-- Click "Manage" in the left sidebar, type your password, click "Unlock".
-- Type a group name (like a folder, for example Rock) and click "Add songs". You can pick many MP3 files at once.
-- Click the trash icon next to a song to delete it. This is the ONLY way a song is ever removed.
-- You can add songs from any PC, in any browser.
+## Getting started
 
-MOVE SONGS TO ANOTHER GROUP (needs internet)
-- Click "Manage" and unlock.
-- Click the folder icon next to a song, then pick or type a group name and click "Move".
-- Or, on a computer, drag a song and drop it on a group in the left sidebar.
+Complete these steps once to set up and deploy your music library.
 
-GROUP IMAGES (needs internet)
-- Click "Manage" and unlock.
-- Click the image icon in a group header and pick an SVG, PNG, JPG, WebP or GIF (up to 2 MiB).
-- The image is shown on the group header, on every song of that group, and while playing.
-- Click the trash icon in the group header to remove the image.
-- Group images work offline too after the page has loaded them once.
+### 1. Install dependencies
 
-RENAME A GROUP (needs internet)
-- Click "Manage" and unlock.
-- Click the pencil icon in a group header, type the new name, click "Rename".
-- All songs and the group image move to the new name. Nothing is re-uploaded.
+```bash
+npm install
+```
 
-LIKE SONGS (works offline, kept per device)
-- Tap the heart next to a song (or in the player, or press F).
-- The "Liked" chip at the top shows only your liked songs.
+### 2. Sign in to Cloudflare
 
-MORE PLAYER THINGS
-- "Recent" chip at the top: your songs ordered by what you played last.
-- Speed button (shows 1x): tap to cycle 0.75x / 1x / 1.25x / 1.5x / 2x.
-- Moon button: sleep timer. Stops the music after 15/30/60 minutes, or after the current song.
-- Close the site and come back later: it remembers the song and the position, press play to continue.
+```bash
+npx wrangler login
+```
 
-LISTEN WITHOUT INTERNET (on each device you want to use)
-1. Open the site once with internet.
-2. Tap the download icon next to a song, or "Download all". A check mark means it is saved on this device.
-3. Without internet, open the site (or the installed app). Downloaded songs play, and you can move the playhead.
-   The "Downloaded" button at the top shows only the saved songs.
-- Tap the check mark again to remove a song from this device.
-- Each device keeps its own downloads. Use Wi-Fi for big downloads.
+Follow the browser prompts to authorize Wrangler.
 
-INSTALL AS AN APP
-- Chrome / Edge on PC or Android: click "Install app" at the top of the page (or the install icon in the address bar).
-- iPhone / iPad (Safari): tap Share, then "Add to Home Screen". Installing helps iOS keep your downloads.
+### 3. Create the KV namespace
 
-AFTER YOU CHANGE THE SITE FILES
-- Run npm run deploy. Open the site twice (the first open loads the new version in the background).
-- If you change public/index.html a lot, change SHELL = "shell-v1" to "shell-v2" in public/sw.js. Downloaded songs are not deleted.
+```bash
+npx wrangler kv namespace create SONGS
+```
 
-TEST ON YOUR COMPUTER (optional)
-- Create a file named .dev.vars with one line:  ADMIN_PASSWORD=choose-a-password
-- npm run dev  ->  http://localhost:8787   (local test songs are kept only on your PC)
+When Wrangler asks:
 
-LIMITS (free plan)
-- Each song: up to 25 MiB.  All songs together on the website: 1 GB.
-- Adding songs: 1,000 writes per day.  Listening: 100,000 reads per day.
-- Player keys: Space = play/pause, Left/Right = jump 5 seconds, N = next, P = previous, F = like, / = search
+1. Choose **Yes** to add the namespace to your configuration.
+2. Use **`SONGS`** as the binding name.
+3. When asked whether to connect the remote resource for local development, choose **No**.
+
+Then open `wrangler.jsonc` and verify that:
+
+- There is exactly **one** KV binding with `"binding": "SONGS"`.
+- The binding has the real namespace `id` generated by Wrangler.
+
+### 4. Deploy the website
+
+```bash
+npm run deploy
+```
+
+Wrangler will print your deployed website URL. Open it to access your music player.
+
+### 5. Set the admin password
+
+```bash
+npx wrangler secret put ADMIN_PASSWORD
+```
+
+Enter a password when prompted and keep it somewhere safe. You will use it to unlock the **Manage** area, where you can add, delete, and organize songs.
+
+---
+
+## Where your music is stored
+
+**Your songs live in Cloudflare KV, not in your project files.** This is important:
+
+- `npm run deploy` updates the website code only. It does **not** add, modify, or delete songs.
+- You can deploy website updates as often as you like. Your uploaded music stays in KV.
+- The `public/songs` folder is only a queue for importing songs; it is not the permanent music library.
+- Emptying `public/songs` after an import does not remove songs from your website.
+
+> **Deleting a song:** A song is removed from the online library only when you delete it through the website's **Manage** area.
+
+## Bulk upload from your computer
+
+Use this method to upload many MP3 files in one deployment.
+
+1. Put your MP3 files in `public/songs`.
+2. Use subfolder names to set each song's group.
+3. Run the deploy command once:
+
+   ```bash
+   npm run deploy
+   ```
+
+### Folder examples
+
+```text
+public/
+└── songs/
+    ├── Rock/
+    │   ├── song-one.mp3
+    │   └── song-two.mp3
+    ├── Jazz/
+    │   └── another-song.mp3
+    └── song-without-a-group.mp3
+```
+
+| File location | Group shown on the website |
+|---|---|
+| `public/songs/Rock/song.mp3` | `Rock` |
+| `public/songs/Jazz/song.mp3` | `Jazz` |
+| `public/songs/song.mp3` | `Other` |
+
+**A few things to know:**
+
+- The upload runs automatically as part of `npm run deploy` and may take a while for large collections.
+- Files that have already been imported are skipped on later deployments.
+- You can empty `public/songs` after importing; the songs remain in Cloudflare KV.
+- To upload a changed file using the same name, first delete the existing song from the website, then deploy again.
+- Each MP3 file can be up to **25 MiB**.
+
+### Restore your library or move to another computer
+
+Keep a backup of your MP3 files. To restore or migrate your music:
+
+1. Copy the MP3 files into `public/songs`, using subfolders for group names.
+2. Run `npm run deploy`.
+3. Once the import is complete, you can empty `public/songs` again.
+
+Your songs will be stored in the website's Cloudflare KV namespace.
+
+## Manage songs and groups
+
+Song and group management requires an internet connection.
+
+1. Open your deployed website.
+2. Select **Manage** in the left sidebar.
+3. Enter your `ADMIN_PASSWORD` and select **Unlock**.
+
+Once unlocked, you can:
+
+| Action | How to do it |
+|---|---|
+| Add songs | Enter a group name (for example, `Rock`), select **Add songs**, and choose one or more MP3 files. |
+| Delete a song | Select the trash icon next to the song. This removes it from the online library. |
+| Move a song | Select the folder icon next to a song, choose or enter a group name, then select **Move**. |
+| Rename a group | Select the pencil icon in the group header, enter the new name, then select **Rename**. |
+| Reorder a song's group | On a computer, drag the song and drop it onto a group in the left sidebar. |
+
+You can manage your library from any computer and browser.
+
+### Rename a group
+
+Renaming a group also moves all of its songs and its group image to the new name. **The songs are not re-uploaded.**
+
+## Group images
+
+You can set a custom image for each group.
+
+1. Open **Manage** and unlock it with your admin password.
+2. Find the group header and select its image icon.
+3. Choose an image file.
+
+Supported formats: **SVG, PNG, JPG, WebP, and GIF**. Each image can be up to **2 MiB**.
+
+The image appears in the group header, alongside songs in that group, and in the player while a song from that group is playing. Group images are also available offline after the page has loaded them once.
+
+To remove a group image, select the trash icon in that group's header.
+
+## Player features
+
+| Feature | What it does |
+|---|---|
+| **Liked** | Select the heart next to a song, or in the player, to like it. You can also press `F`. The **Liked** chip filters the library to your liked songs. Likes are saved locally on each device. |
+| **Recent** | The **Recent** chip shows songs ordered by when you last played them. |
+| **Playback speed** | Select the speed button (shown as `1x`) to cycle through `0.75x`, `1x`, `1.25x`, `1.5x`, and `2x`. |
+| **Sleep timer** | Select the moon button to stop playback after 15, 30, or 60 minutes, or after the current song. |
+| **Resume playback** | The site remembers your last song and playback position. Reopen the site and press Play to continue. |
+
+## Listen offline
+
+Downloads are stored **per device**. Repeat these steps on every computer or phone where you want offline playback.
+
+### Before going offline
+
+1. Open the website once while connected to the internet.
+2. Select the download icon next to a song, or choose **Download all**.
+3. Wait for the check mark to appear. It means the song is saved on that device.
+
+### While offline
+
+- Open the website, or the installed app.
+- Play downloaded songs and move the playhead as needed.
+- Select **Downloaded** at the top to show only songs saved on that device.
+- Select a song's check mark to remove its local download. This does **not** delete the online song.
+
+> Each device maintains its own downloads. Use Wi-Fi when downloading a large collection.
+
+## Install as an app
+
+Installing the site makes it easier to open and can help keep offline downloads available.
+
+- **Chrome or Edge (PC and Android):** Select **Install app** at the top of the page, or use the install icon in the browser's address bar.
+- **iPhone or iPad:** Open the site in Safari, tap **Share**, then select **Add to Home Screen**.
+
+## Deploying updates
+
+After changing the website's source files, deploy the updated app:
+
+```bash
+npm run deploy
+```
+
+Your Cloudflare KV music library is not changed by this command.
+
+After deployment:
+
+1. Open the website twice. The first visit loads the new version in the background.
+2. If you make significant changes to `public/index.html`, update the cache version in `public/sw.js`:
+
+   ```js
+   SHELL = "shell-v2";
+   ```
+
+   For example, change `shell-v1` to `shell-v2`.
+
+Updating the shell version does **not** delete downloaded songs.
+
+## Run locally
+
+Local development is optional. Local test songs are stored only on your computer.
+
+1. Create a file named `.dev.vars` in the project root.
+2. Add your local admin password:
+
+   ```dotenv
+   ADMIN_PASSWORD=choose-a-password
+   ```
+
+3. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+4. Open [http://localhost:8787](http://localhost:8787).
+
+## Free-plan limits
+
+| Limit | Maximum |
+|---|---:|
+| Individual song size | 25 MiB |
+| Total online music storage | 1 GB |
+| KV writes (for adding songs) | 1,000 per day |
+| KV reads (for listening) | 100,000 per day |
+
+## Keyboard shortcuts
+
+| Key | Action |
+|---|---|
+| `Space` | Play / pause |
+| `←` / `→` | Seek backward / forward by 5 seconds |
+| `N` | Next song |
+| `P` | Previous song |
+| `F` | Like / unlike the current song |
+| `/` | Focus search |
