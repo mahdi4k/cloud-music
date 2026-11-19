@@ -1,0 +1,18 @@
+{
+	"name": "my-music",
+	"main": "src/worker.js",
+	"compatibility_date": "2026-11-17",
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"kv_namespaces": [
+		{
+			"binding": "SONGS",
+			"id": "20da4b5089b34d048a61b08face0bc2f"
+		}
+	]
+}

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="70" y1="30" x2="450" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8a5cff"/>
+      <stop offset=".55" stop-color="#5a6cff"/>
+      <stop offset="1" stop-color="#17c69a"/>
+    </linearGradient>
+    <radialGradient id="shine" cx=".28" cy=".18" r=".85">
+      <stop stop-color="#ffffff" stop-opacity=".38"/>
+      <stop offset=".55" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="118" fill="url(#shine)"/>
+  <g fill="#ffffff">
+    <path d="M216 104 L420 68 L420 140 L216 176 Z"/>
+    <rect x="216" y="150" width="24" height="212"/>
+    <rect x="396" y="114" width="24" height="212"/>
+    <ellipse cx="206" cy="366" rx="56" ry="44" transform="rotate(-16 206 366)"/>
+    <ellipse cx="386" cy="330" rx="56" ry="44" transform="rotate(-16 386 330)"/>
+  </g>
+  <path d="M118 388l9-22 9 22 22 9-22 9-9 22-9-22-22-9z" fill="#ffffff" opacity=".85"/>
+  <path d="M404 244l6-15 6 15 15 6-15 6-6 15-6-15-15-6z" fill="#ffffff" opacity=".7"/>
+</svg>

@@ -1,0 +1,14 @@
+{
+  "name": "my-music",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "predeploy": "node import-songs.mjs && node make-playlist.mjs",
+    "deploy": "wrangler deploy",
+    "import": "node import-songs.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

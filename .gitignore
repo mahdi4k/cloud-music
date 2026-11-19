@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Wrangler / Cloudflare
+.dev.vars
+.dev.vars.*
+.wrangler/
+
+# Songs are stored in Cloudflare KV, never in the repo
+public/songs/
+*.mp3
+*.m4a
+*.ogg
+*.wav
+*.flac
+
+# Generated playlist cache
+public/songs.json
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/

@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My songs</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{color-scheme:dark;--bg:#000;--panel:#121212;--raise:#181818;--raise2:#242424;--hover:#2a2a2a;--ink:#fff;--muted:#b3b3b3;--line:#2a2a2a;--accent:#1ed760;--accent-soft:rgba(30,215,96,.15);--track:#4d4d4d;--buffer:#7a7a7a;--shadow:0 8px 24px rgba(0,0,0,.5)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.45 "Segoe UI",system-ui,-apple-system,"SF Pro Text",Roboto,sans-serif;overflow:hidden}
+svg{width:1.4rem;height:1.4rem;fill:currentColor;display:block}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:root{--sbw:0}
+.shell{height:calc(100dvh - var(--sbw));display:grid;grid-template-columns:292px minmax(0,1fr);gap:.5rem;padding:.5rem}
+/* ---------- Sidebar ---------- */
+aside{background:#000;border-radius:.75rem;display:flex;flex-direction:column;min-height:0;overflow:hidden;z-index:40}
+.side-top{padding:.9rem 1rem 1rem}
+.brand{display:flex;align-items:center;gap:.6rem;margin-bottom:1.4rem}
+.brand img{width:2.3rem;height:2.3rem;border-radius:.6rem}
+.brand b{font-size:1.2rem;font-weight:800;letter-spacing:-.02em}
+.navbtn{display:flex;align-items:center;gap:1rem;width:100%;padding:.6rem .75rem;border-radius:.5rem;color:var(--muted);font-weight:700;transition:color .15s,background .15s}
+.navbtn svg{width:1.55rem;height:1.55rem}
+.navbtn:hover{color:var(--ink)}
+.navbtn[aria-pressed=true]{color:var(--ink);background:var(--raise2)}
+.side-lib{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--panel);border-radius:.75rem;margin:0 .5rem .5rem}
+.side-lib-head{display:flex;align-items:center;gap:.6rem;padding:1rem 1rem .6rem;color:var(--muted);font-weight:800}
+.side-lib-head svg{width:1.4rem;height:1.4rem}
+#groupNav{flex:1;overflow-y:auto;padding:0 .4rem .6rem;scrollbar-width:thin;scrollbar-color:#555 transparent}
+.gitem{display:flex;align-items:center;gap:.8rem;width:100%;padding:.55rem .6rem;border-radius:.5rem;text-align:left;transition:background .15s}
+.gitem:hover{background:var(--raise2)}
+.gitem[aria-pressed=true]{background:var(--raise2)}
+.gitem .gart{width:3rem;height:3rem;flex:none}
+.gitem .gtxt{flex:1;min-width:0}
+.gitem .gtxt b{display:block;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gitem[aria-pressed=true] .gtxt b{color:var(--accent)}
+.gitem .gtxt span{display:block;font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gitem.dragover{outline:2px solid var(--accent);outline-offset:-2px}
+.side-manage{padding:.5rem .6rem .7rem}
+.side-manage .navbtn{font-size:.9rem}
+/* ---------- Main ---------- */
+.main{position:relative;background:linear-gradient(180deg,#202020 0%,#181818 320px,var(--panel) 640px);border-radius:.75rem;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:#555 transparent}
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:.75rem;padding:.9rem 1.5rem;background:rgba(18,18,18,.65);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.burger{display:none;flex:none;width:2.6rem;height:2.6rem;place-items:center;border-radius:50%;color:var(--ink)}
+.burger:hover{background:var(--raise2)}
+.search{display:flex;align-items:center;gap:.6rem;flex:1;max-width:26rem;padding:.55rem .9rem;background:var(--raise);border-radius:999px;border:1px solid transparent;transition:border-color .15s}
+.search:focus-within{border-color:#666}
+.search svg{color:var(--muted);width:1.15rem;height:1.15rem}
+.search input{flex:1;min-width:0;border:0;background:none;outline:0}
+.search kbd{font-size:.7rem;color:var(--muted);border:1px solid #444;border-radius:.3rem;padding:0 .3rem}
+.tbtn{flex:none;padding:.5rem 1rem;border-radius:999px;font-weight:700;font-size:.9rem;color:var(--muted);background:var(--raise);white-space:nowrap;transition:transform .12s,color .15s,background .15s}
+.tbtn:hover{color:var(--ink);transform:scale(1.04)}
+.tbtn.primary{background:var(--ink);color:#000}
+.tbtn.primary:hover{color:#000}
+.content{padding:.5rem 1.5rem 2.5rem}
+#offlineNote{margin:0 0 1rem;padding:.6rem .9rem;border-radius:.5rem;background:var(--raise);color:var(--muted)}
+/* greeting + shelf */
+.greet{margin:1rem 0 1.25rem;font-size:2rem;font-weight:800;letter-spacing:-.02em}
+.shelfwrap{margin-bottom:1.75rem}
+.shelfwrap[hidden]{display:none}
+.shelftitle{margin:0 0 .8rem;font-size:1.15rem;font-weight:800}
+.shelf{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(155px,180px);gap:.75rem;overflow-x:auto;padding-bottom:.5rem;scrollbar-width:none}
+.shelf::-webkit-scrollbar{display:none}
+.card{position:relative;display:flex;flex-direction:column;gap:.75rem;padding:.85rem;background:var(--raise);border-radius:.65rem;text-align:left;transition:background .2s}
+.card:hover{background:var(--raise2)}
+.card .art{width:100%;aspect-ratio:1;border-radius:.5rem}
+.card b{font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card span{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .play{position:absolute;right:.85rem;bottom:5.2rem;width:3rem;height:3rem;border-radius:50%;background:var(--accent);color:#000;display:grid;place-items:center;box-shadow:0 8px 18px rgba(0,0,0,.5);opacity:0;transform:translateY(.4rem);transition:opacity .2s,transform .2s}
+.card .play svg{width:1.4rem;height:1.4rem}
+.card:hover .play,.card:focus-visible .play{opacity:1;transform:none}
+/* group headers */
+.ghead{display:flex;align-items:center;gap:1rem;margin:1.9rem 0 .7rem;padding:0;background:none;border:0;border-radius:.75rem}
+.ghead .gart{width:4rem;height:4rem;border-radius:.5rem}
+.ghead h2{margin:0;font-size:1.5rem;font-weight:800;letter-spacing:-.01em;flex:1;min-width:0;display:flex;flex-direction:column;gap:.1rem}
+.ghead h2 .count{color:var(--muted);font-weight:500;font-size:.85rem}
+.gart{flex:none;border-radius:.5rem;overflow:hidden;display:grid;place-items:center;color:#fff;font-weight:750;background:var(--track);font-size:1.15rem}
+.gart img{width:100%;height:100%;object-fit:cover;display:block}
+.gbtn,.move{display:none;place-items:center;flex:none;width:2.4rem;height:2.4rem;border-radius:50%;color:var(--muted);transition:color .15s,background .15s,transform .12s}
+.gbtn:hover,.move:hover{color:var(--ink);background:var(--raise2);transform:scale(1.08)}
+body.manage .gbtn,body.manage .move{display:grid}
+/* song rows */
+.row{display:flex;align-items:center;gap:.15rem;border-radius:.4rem}
+.row:hover{background:var(--raise)}
+.row[draggable=true]{cursor:grab}
+.row.dragging{opacity:.35}
+.song{display:flex;align-items:center;gap:1rem;flex:1;min-width:0;width:100%;padding:.45rem .6rem;border-radius:.4rem;text-align:left}
+.song:hover{background:var(--raise)}
+.song[aria-current=true] .title{color:var(--accent)}
+.song .title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song .sub{display:block;font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art{flex:none;position:relative;width:3rem;height:3rem;border-radius:.35rem;display:grid;place-items:center;color:#fff;font-weight:750;font-size:1.1rem;overflow:hidden;background:var(--track)}
+.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.eq{display:none;gap:2px;align-items:flex-end;height:1rem;flex:none}
+.eq i{width:3px;height:40%;background:var(--accent);border-radius:1px}
+.song[aria-current=true] .eq{display:flex}
+@media (prefers-reduced-motion:no-preference){body.playing .song[aria-current=true] .eq i{animation:bounce .9s ease-in-out infinite alternate}.eq i:nth-child(2){animation-delay:.25s!important}.eq i:nth-child(3){animation-delay:.5s!important}}
+@keyframes bounce{to{height:100%}}
+.statusrow{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:.25rem 0 .5rem}
+#status{color:var(--muted);margin:0}
+#dlAll{padding:.35rem .9rem;border-radius:999px;background:var(--raise);font-weight:700;font-size:.85rem;white-space:nowrap}
+#dlAll:hover{background:var(--raise2)}
+/* row action buttons */
+.del{display:none;place-items:center;flex:none;width:2.4rem;height:2.4rem;border-radius:50%;color:var(--muted);transition:color .15s,background .15s}
+.del:hover{color:#e5484d;background:var(--raise2)}
+body.manage .del{display:grid}
+.dl{display:grid;place-items:center;flex:none;min-width:2.4rem;height:2.4rem;padding:0 .3rem;border-radius:999px;color:var(--muted);transition:color .15s,background .15s}
+.dl:hover{background:var(--raise2);color:var(--ink)}
+.dl.on{color:var(--accent)}
+.dl svg{width:1.15rem;height:1.15rem}
+.pct{font-size:.75rem;font-variant-numeric:tabular-nums;color:var(--accent)}
+.offline .song[data-ready=false]{opacity:.45}
+/* admin panel */
+#admin{background:var(--raise);border-radius:.65rem;padding:1rem;margin-bottom:1rem}
+#admin form,.addrow{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+#admin input:not([type=file]){flex:1 1 10rem;min-width:0;padding:.55rem .9rem;border:1px solid var(--line);border-radius:.4rem;background:var(--panel);outline:0}
+#admin input:focus{border-color:#666}
+#admin .tbtn{background:var(--raise2)}
+#admin p{margin:.6rem 0 0;color:var(--muted);font-size:.9rem}
+/* ---------- Player ---------- */
+.player{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:1fr minmax(0,30rem) 1fr;gap:1rem;align-items:center;padding:.6rem 1rem calc(.6rem + env(safe-area-inset-bottom,0px));background:#000;border-top:1px solid #1f1f1f}
+:root{--sbw:5.6rem}
+.now{display:flex;gap:.75rem;align-items:center;min-width:0}
+.now .art{width:3.4rem;height:3.4rem;border-radius:.25rem}
+.meta{display:flex;flex-direction:column;min-width:0}
+.meta strong,.meta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta strong{font-size:.92rem}
+.meta span{font-size:.78rem;color:var(--muted)}
+.buttons{display:flex;justify-content:center;align-items:center;gap:.7rem}
+.btn{display:grid;place-items:center;width:2.2rem;height:2.2rem;border-radius:50%;color:var(--muted);position:relative;transition:color .15s,transform .12s}
+.btn:hover{color:var(--ink);transform:scale(1.06)}
+.btn[aria-pressed=true],.btn.on{color:var(--accent)}
+.btn.main{width:3rem;height:3rem;background:#fff;color:#000}
+.btn.main:hover{background:var(--accent);color:#000;transform:scale(1.05)}
+.btn:disabled{opacity:.35;pointer-events:none}
+.btn svg{width:1.2rem;height:1.2rem}
+.fav:hover{color:var(--accent)}
+.fav.on,.fav.on:hover{color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.fav.on{animation:heart .25s ease}}
+@keyframes heart{50%{transform:scale(1.3)}}
+#speedBtn{font-size:.8rem;font-weight:800}
+#repeat[data-mode=one]::after{content:"1";position:absolute;right:.25rem;top:.1rem;font-size:.65rem;font-weight:800}
+#sleepBtn.on{color:var(--accent)}
+#sleepBtn[data-min]:not([data-min=""])::after{content:attr(data-min);position:absolute;right:0;top:0;font-size:.6rem;font-weight:800;color:var(--accent)}
+.seek{display:flex;align-items:center;gap:.6rem;font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:.35rem}
+.seek input{flex:1}
+.vol{display:flex;align-items:center;gap:.5rem;justify-content:flex-end;color:var(--muted)}
+.vol input{width:6rem}
+.vol svg{width:1.05rem;height:1.05rem}
+input[type=range]{appearance:none;-webkit-appearance:none;height:4px;border-radius:2px;cursor:pointer;background:linear-gradient(to right,var(--accent) var(--p,0%),var(--buffer) var(--p,0%) var(--b,0%),var(--track) var(--b,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;border:0;opacity:0;transition:opacity .15s}
+input[type=range]:hover::-webkit-slider-thumb,input[type=range]:active::-webkit-slider-thumb{opacity:1}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:0}
+/* ---------- dialogs ---------- */
+[hidden]{display:none!important}
+dialog{background:#282828;color:var(--ink);border:0;border-radius:.6rem;padding:1.25rem;max-width:22rem;width:calc(100vw - 3rem);box-shadow:0 24px 70px rgba(0,0,0,.6)}
+dialog::backdrop{background:rgba(0,0,0,.7)}
+@media (prefers-reduced-motion:no-preference){dialog[open]{animation:dlg .18s ease}}
+@keyframes dlg{from{opacity:0;transform:scale(.95) translateY(10px)}}
+#moveDlg form,#renameDlg form{display:flex;flex-direction:column;gap:.75rem}
+#moveDlg h3,#renameDlg h3,#sleepDlg h3{margin:0 0 .25rem;font-size:1.1rem}
+#moveDlg p,#renameDlg p{margin:0;color:var(--muted);font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#moveDlg input,#renameDlg input{padding:.6rem .9rem;border:1px solid #444;border-radius:.3rem;background:#3e3e3e;outline:0}
+.dlgbtns{display:flex;gap:.5rem;justify-content:flex-end}
+.optlist{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem}
+#sleepDlg .current{color:var(--muted);font-size:.9rem;margin:.25rem 0 0}
+.chip{padding:.45rem 1.1rem;border-radius:999px;background:#3e3e3e;font-weight:700;font-size:.9rem;color:var(--ink);white-space:nowrap;transition:transform .12s,background .15s}
+.chip:hover{background:#4a4a4a;transform:scale(1.04)}
+.chip.ok{background:var(--ink);color:#000}
+/* ---------- mobile ---------- */
+.scrim{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s}
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr}
+  aside{position:fixed;left:0;top:0;bottom:0;width:min(80vw,320px);border-radius:0 .75rem .75rem 0;transform:translateX(-105%);transition:transform .25s}
+  body.nav-open aside{transform:none}
+  body.nav-open .scrim{opacity:1;pointer-events:auto}
+  .burger{display:grid}
+  .content{padding:.25rem 1rem 2.5rem}
+  .greet{font-size:1.5rem}
+  .player{grid-template-columns:1fr;gap:.35rem;padding:.5rem .75rem calc(.5rem + env(safe-area-inset-bottom,0px))}
+  :root{--sbw:9.5rem}
+  .vol{display:none}
+  .buttons{gap:.4rem}
+  .now{min-width:0}
+  .now .meta{flex:1}
+  .ghead h2{font-size:1.15rem}
+  .ghead .gart{width:3rem;height:3rem}
+  .tbtn{padding:.45rem .8rem}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="side-top">
+      <div class="brand"><img class="logo" src="/icon.svg" alt=""><b>My songs</b></div>
+      <button class="navbtn" data-view="All" aria-pressed="true" id="navAll" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 9h-3v9h-5v-6h-4v6H5v-9H2z"/></svg>Home</button>
+      <button class="navbtn" data-view="Recent" aria-pressed="false" id="navRecent" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm.5-13H11v6l5.2 3.1.8-1.3-4.5-2.7z"/></svg>Recent</button>
+      <button class="navbtn" data-view="Liked" aria-pressed="false" id="navLiked" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>Liked songs</button>
+      <button class="navbtn" data-view="Downloaded" aria-pressed="false" id="navDownloaded" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Downloaded</button>
+    </div>
+    <div class="side-lib">
+      <div class="side-lib-head"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h2v14H4zM8 4h2v18H8zM13 5l4.5 15 1.9-.57-4.5-15zM18.4 4.6l2 14 1.97-.28-2-14z"/></svg>Your library</div>
+      <nav id="groupNav" aria-label="Groups"></nav>
+      <div class="side-manage">
+        <button class="navbtn" id="manageBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg><span>Manage</span></button>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="burger" id="burger" type="button" aria-label="Open menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></button>
+      <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input id="search" type="search" placeholder="What do you want to listen to?" autocomplete="off" aria-label="Search songs or groups"><kbd>/</kbd></label>
+      <button class="tbtn" id="installBtn" type="button" hidden>Install app</button>
+    </div>
+    <div class="content">
+      <section id="admin" hidden>
+        <form id="loginForm"><input id="pw" type="password" placeholder="Admin password" autocomplete="current-password" aria-label="Admin password"><button class="tbtn primary" type="submit">Unlock</button></form>
+        <div id="tools" hidden>
+          <div class="addrow"><input id="groupInput" list="groupList" placeholder="Group (like a folder)" aria-label="Group name"><datalist id="groupList"></datalist><button class="tbtn primary" id="addBtn" type="button">Add songs</button><input id="files" type="file" accept=".mp3,audio/mpeg" multiple hidden></div>
+          <p id="adminStatus" role="status"></p>
+        </div>
+        <p id="adminMsg" role="status"></p>
+      </section>
+      <p id="offlineNote" hidden>You are offline. Only downloaded songs can play.</p>
+      <h1 class="greet" id="greet">Home</h1>
+      <div class="shelfwrap" id="recentShelfWrap" hidden><h2 class="shelftitle">Jump back in</h2><div class="shelf" id="recentShelf"></div></div>
+      <div class="statusrow"><p id="status" role="status">Loading songs…</p><button id="dlAll" type="button" hidden>Download all</button></div>
+      <main id="list"></main>
+    </div>
+  </div>
+</div>
+<div class="scrim" id="scrim"></div>
+<dialog id="moveDlg" aria-labelledby="moveTitle">
+  <form method="dialog">
+    <h3 id="moveTitle">Move song</h3>
+    <p id="moveName"></p>
+    <input id="moveInput" list="groupList" placeholder="Group name (pick or type a new one)" aria-label="Group name">
+    <div class="dlgbtns"><button value="cancel" class="chip" type="submit">Cancel</button><button value="ok" class="chip ok" type="submit">Move</button></div>
+  </form>
+</dialog>
+<dialog id="sleepDlg" aria-labelledby="sleepTitle">
+  <form method="dialog">
+    <h3 id="sleepTitle">Sleep timer</h3>
+    <p class="current" id="sleepInfo">Music stops when the timer ends.</p>
+    <div class="optlist">
+      <button value="off" class="chip" type="submit">Off</button>
+      <button value="15" class="chip" type="submit">15 min</button>
+      <button value="30" class="chip" type="submit">30 min</button>
+      <button value="60" class="chip" type="submit">60 min</button>
+      <button value="end" class="chip" type="submit">After this song</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="renameDlg" aria-labelledby="renameTitle">
+  <form method="dialog">
+    <h3 id="renameTitle">Rename group</h3>
+    <p id="renameName"></p>
+    <input id="renameInput" placeholder="New group name" aria-label="New group name">
+    <div class="dlgbtns"><button value="cancel" class="chip" type="submit">Cancel</button><button value="ok" class="chip ok" type="submit">Rename</button></div>
+  </form>
+</dialog>
+<input id="imgFile" type="file" accept=".svg,.png,.jpg,.jpeg,.webp,.gif,image/svg+xml,image/png,image/jpeg,image/webp,image/gif" hidden>
+<footer class="player">
+  <audio id="audio" preload="metadata"></audio>
+  <div class="now"><div class="art" id="nowArt" style="background:var(--track)">♪</div><div class="meta"><strong id="nowTitle">Nothing playing</strong><span id="nowGroup">Pick a song</span></div><button class="btn fav" id="favBtn" data-icon="heart" aria-label="Like this song" aria-pressed="false" disabled></button></div>
+  <div>
+    <div class="buttons">
+      <button class="btn" id="shuffle" data-icon="shuffle" aria-label="Shuffle" aria-pressed="false"></button>
+      <button class="btn" id="prev" data-icon="prev" aria-label="Previous song"></button>
+      <button class="btn main" id="toggle" data-icon="play" aria-label="Play"></button>
+      <button class="btn" id="next" data-icon="next" aria-label="Next song"></button>
+      <button class="btn" id="repeat" data-icon="repeat" data-mode="off" aria-label="Repeat off" aria-pressed="false"></button>
+      <button class="btn" id="speedBtn" aria-label="Playback speed">1×</button>
+      <button class="btn" id="sleepBtn" data-icon="moon" aria-label="Sleep timer"></button>
+    </div>
+    <div class="seek"><span id="cur">0:00</span><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Song position"><span id="dur">0:00</span></div>
+  </div>
+  <div class="vol"><span data-icon="volume"></span><input id="volume" type="range" min="0" max="100" value="80" aria-label="Volume"></div>
+</footer>
+<script>
+const ICONS={play:"M8 5v14l11-7z",pause:"M6 19h4V5H6v14zm8-14v14h4V5h-4z",prev:"M6 6h2v12H6zm3.5 6l8.5 6V6z",next:"M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z",shuffle:"M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z",repeat:"M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z",volume:"M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z",download:"M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",done:"M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",trash:"M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",search:"M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",folder:"M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z",image:"M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z",heart:"M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z",moon:"M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36A5.39 5.39 0 0118.46 15 5.39 5.39 0 0112.1 8.64c0-1.5.62-2.85 1.61-3.83A9 9 0 0012 3z",pencil:"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"};
+const $=id=>document.getElementById(id);
+const audio=$("audio"),list=$("list"),statusText=$("status"),seek=$("seek"),volume=$("volume");
+const state={songs:[],groupImages:{},downloaded:new Set(),favorites:new Set(),recent:[],speed:1,group:"All",query:"",queue:[],current:null,history:[],shuffle:false,repeat:"off"};
+let seeking=false;
+
+function iconSvg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+ICONS[name]+'"/></svg>'}
+function setIcon(node,name){const old=node.querySelector("svg");if(old)old.remove();node.insertAdjacentHTML("afterbegin",iconSvg(name))}
+function el(tag,className,text){const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=text;return n}
+function formatTime(s){if(!isFinite(s))return"0:00";return Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0")}
+function hueOf(text){let h=0;for(const ch of text)h=(h*31+ch.codePointAt(0))%360;return h}
+function paintArt(node,song){const h=hueOf(song.title);node.style.background="linear-gradient(135deg,hsl("+h+" 70% 62%),hsl("+(h+50)%360+" 65% 42%))";node.textContent=[...song.title][0].toUpperCase()}
+function groupImage(song){return state.groupImages[song.group]||null}
+function paintGroupArt(node,song){
+  const img=groupImage(song);
+  if(img){const i=el("img");i.src=img;i.alt="";i.loading="lazy";node.append(i);return}
+  paintArt(node,song);
+}
+function save(key,value){try{localStorage.setItem("mymusic:"+key,JSON.stringify(value))}catch{}}
+function load(key,fallback){try{const v=localStorage.getItem("mymusic:"+key);return v===null?fallback:JSON.parse(v)}catch{return fallback}}
+function setFill(input,percent,buffered){input.style.setProperty("--p",percent+"%");input.style.setProperty("--b",(buffered===undefined?percent:buffered)+"%")}
+
+const PSEUDO_GROUPS=["All","Recent","Liked","Downloaded"];
+function inChosenGroup(s){
+  if(state.group==="All"||state.group==="Recent")return true;
+  if(state.group==="Liked")return state.favorites.has(s.url);
+  if(state.group==="Downloaded")return state.downloaded.has(s.url);
+  return s.group===state.group;
+}
+function isPlayable(s){return navigator.onLine||state.downloaded.has(s.url)}
+function visibleSongs(){
+  const q=state.query.trim().toLowerCase();
+  const songs=state.songs.filter(s=>inChosenGroup(s)&&(!q||s.title.toLowerCase().includes(q)||s.group.toLowerCase().includes(q)));
+  if(state.group==="Recent"){
+    const rank=new Map(state.recent.map((u,i)=>[u,i]));
+    return [...songs].sort((a,b)=>((rank.get(a.url)??1e9)-(rank.get(b.url)??1e9))||a.title.localeCompare(b.title));
+  }
+  return songs;
+}
+function markCurrent(){
+  list.querySelectorAll(".song").forEach(b=>b.setAttribute("aria-current",String(!!state.current&&b.dataset.url===state.current.url)));
+}
+function groupHeader(name){
+  const head=el("div","ghead");
+  const art=el("div","gart");
+  const img=state.groupImages[name];
+  if(img){const i=el("img");i.src=img;i.alt="";i.loading="lazy";art.append(i)}
+  else{const h=hueOf(name);art.style.background="linear-gradient(135deg,hsl("+h+" 70% 62%),hsl("+(h+50)%360+" 65% 42%))";art.textContent=[...name][0].toUpperCase()}
+  const count=state.songs.filter(s=>s.group===name).length;
+  const h2=el("h2","",name);h2.append(el("span","count",count+(count===1?" song":" songs")));
+  head.append(art,h2);
+  if(document.body.classList.contains("manage")){
+    const pick=el("button","gbtn");pick.type="button";pick.title="Set image for "+name;pick.setAttribute("aria-label","Set image for "+name);setIcon(pick,"image");
+    pick.addEventListener("click",()=>pickGroupImage(name));
+    const ren=el("button","gbtn");ren.type="button";ren.title="Rename group "+name;ren.setAttribute("aria-label","Rename group "+name);setIcon(ren,"pencil");
+    ren.addEventListener("click",()=>openRenameDialog(name));
+    head.append(pick,ren);
+    if(img){
+      const rm=el("button","gbtn");rm.type="button";rm.title="Remove image for "+name;rm.setAttribute("aria-label","Remove image for "+name);setIcon(rm,"trash");
+      rm.addEventListener("click",()=>removeGroupImage(name));
+      head.append(rm);
+    }
+  }
+  return head;
+}
+function songRow(song,songs){
+  const row=el("div","row");
+  row.draggable=document.body.classList.contains("manage")&&!song.static;
+  row.dataset.id=song.id;
+  const button=el("button","song");button.type="button";button.dataset.url=song.url;
+  const art=el("div","art");paintGroupArt(art,song);
+  const eq=el("span","eq");eq.innerHTML="<i></i><i></i><i></i>";
+  const meta=el("span","title");meta.textContent=song.title;
+  const sub=el("span","sub",song.group);
+  meta.append(sub);
+  button.append(art,meta,eq);
+  button.addEventListener("click",()=>playSong(song,{queue:songs}));
+  row.addEventListener("dragstart",e=>{if(song.static)return;row.classList.add("dragging");e.dataTransfer.setData("text/plain",song.id);e.dataTransfer.effectAllowed="move"});
+  row.addEventListener("dragend",()=>row.classList.remove("dragging"));
+  const move=el("button","move");move.type="button";move.title="Move to another group";move.setAttribute("aria-label","Move "+song.title+" to another group");setIcon(move,"folder");
+  move.addEventListener("click",()=>openMoveDialog(song));
+  if(song.static){move.disabled=true;move.title="This song comes from the public/songs folder. Move the file into a subfolder and deploy again.";move.style.opacity=".3"}
+  const fav=el("button","btn fav");fav.type="button";fav.title="Like "+song.title;fav.setAttribute("aria-label","Like "+song.title);fav.setAttribute("aria-pressed",String(state.favorites.has(song.url)));fav.classList.toggle("on",state.favorites.has(song.url));setIcon(fav,"heart");
+  fav.addEventListener("click",()=>toggleFav(song));
+  const del=el("button","del");del.type="button";del.setAttribute("aria-label","Delete "+song.title);setIcon(del,"trash");
+  del.addEventListener("click",()=>deleteSong(song));
+  const dl=el("button","dl");dl.type="button";dl.dataset.url=song.url;
+  dl.addEventListener("click",()=>toggleDownload(song));
+  row.append(button,fav,move,dl,del);
+  return row;
+}
+function recentCard(song){
+  const card=el("button","card");card.type="button";
+  const art=el("div","art");paintGroupArt(art,song);
+  const b=el("b","",song.title);
+  const s=el("span","",song.group);
+  const play=el("span","play");play.innerHTML=iconSvg("play");
+  card.append(art,b,s,play);
+  card.addEventListener("click",()=>playSong(song,{queue:visibleSongs()}));
+  return card;
+}
+function renderRecentShelf(){
+  const wrap=$("recentShelfWrap"),shelf=$("recentShelf");
+  const recentSongs=state.recent.map(u=>state.songs.find(s=>s.url===u)).filter(Boolean).slice(0,10);
+  const show=(state.group==="All")&&recentSongs.length>1&&!state.query.trim();
+  wrap.hidden=!show;
+  if(show)shelf.replaceChildren(...recentSongs.map(recentCard));
+}
+function renderList(){
+  const songs=visibleSongs();list.replaceChildren();
+  renderRecentShelf();
+  if(!songs.length){
+    $("dlAll").hidden=true;
+    statusText.textContent=state.group==="Liked"&&!state.songs.length?"No songs yet.":state.group==="Liked"?"No liked songs yet. Tap the heart next to a song.":state.songs.length?"No songs match your search.":"No songs yet. Click Manage in the sidebar, enter your password, then Add songs — or put MP3 files into public/songs and run npm run deploy once.";
+    return;
+  }
+  updateStatusRow(songs);
+  const flat=state.group==="Recent";
+  let lastGroup=null,section=null;
+  for(const song of songs){
+    if(!flat&&song.group!==lastGroup){lastGroup=song.group;section=el("section","group");section.append(groupHeader(song.group));list.append(section)}
+    (flat?list:section).append(songRow(song,songs));
+  }
+  markCurrent();paintDownloads();
+}
+function renderChips(){
+  // sidebar navigation (the old chips row, now living in the left sidebar)
+  if(state.group==="Downloaded"&&!state.downloaded.size)state.group="All";
+  if(state.group==="Liked"&&!state.favorites.size)state.group="All";
+  $("navLiked").hidden=!state.favorites.size;
+  $("navDownloaded").hidden=!state.downloaded.size;
+  for(const id of ["navAll","navRecent","navLiked","navDownloaded"])$(id).setAttribute("aria-pressed","false");
+  const map={All:"navAll",Recent:"navRecent",Liked:"navLiked",Downloaded:"navDownloaded"};
+  if(map[state.group])$(map[state.group]).setAttribute("aria-pressed","true");
+  const names=[...new Set(state.songs.map(s=>s.group))].sort((a,b)=>a.localeCompare(b));
+  const nav=$("groupNav");
+  nav.replaceChildren(...names.map(name=>{
+    const count=state.songs.filter(s=>s.group===name).length;
+    const item=el("button","gitem");item.type="button";
+    item.setAttribute("aria-pressed",String(name===state.group));
+    const art=el("div","gart");
+    const img=state.groupImages[name];
+    if(img){const i=el("img");i.src=img;i.alt="";i.loading="lazy";art.append(i)}
+    else{const h=hueOf(name);art.style.background="linear-gradient(135deg,hsl("+h+" 70% 62%),hsl("+(h+50)%360+" 65% 42%))";art.textContent=[...name][0].toUpperCase()}
+    const txt=el("div","gtxt");txt.append(el("b","",name),el("span","",count+(count===1?" song":" songs")+" · Group"));
+    item.append(art,txt);
+    item.addEventListener("click",()=>{state.group=name;closeNav();renderChips();renderList()});
+    // Drop a song here (Manage mode, desktop) to move it into this group.
+    item.addEventListener("dragover",e=>{if(document.body.classList.contains("manage")){e.preventDefault();item.classList.add("dragover")}});
+    item.addEventListener("dragleave",()=>item.classList.remove("dragover"));
+    item.addEventListener("drop",e=>{
+      item.classList.remove("dragover");
+      if(!document.body.classList.contains("manage"))return;
+      e.preventDefault();
+      const id=e.dataTransfer.getData("text/plain");
+      const song=state.songs.find(s=>s.id===id);
+      if(song)moveSongToGroup(song,name);
+    });
+    return item;
+  }));
+  updateGreet();
+}
+function updateGreet(){
+  const g=$("greet");
+  const hour=new Date().getHours();
+  let hello=hour<5?"Good night":hour<12?"Good morning":hour<18?"Good afternoon":"Good evening";
+  g.textContent=state.group==="All"?hello:state.group;
+}
+function closeNav(){document.body.classList.remove("nav-open")}
+$("burger").addEventListener("click",()=>document.body.classList.toggle("nav-open"));
+$("scrim").addEventListener("click",closeNav);
+for(const id of ["navAll","navRecent","navLiked","navDownloaded"])$(id).addEventListener("click",()=>{state.group=$(id).dataset.view;closeNav();renderChips();renderList()});
+
+function showNow(song){
+  $("nowTitle").textContent=song.title;$("nowGroup").textContent=song.group;
+  const art=$("nowArt");art.replaceChildren();art.style.background="";paintGroupArt(art,song);if(!groupImage(song))art.style.background="var(--track)";
+  document.title=song.title+" - My songs";
+  if("mediaSession" in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:song.title,artist:song.group,album:"My songs"})}
+  paintNowFav();
+}
+function playSong(song,options={}){
+  if(!isPlayable(song)){statusText.textContent="You are offline. Download this song first to play it without internet.";return}
+  if(options.queue)state.queue=options.queue;
+  if(state.current&&!options.skipHistory)state.history.push(state.current);
+  state.current=song;audio.src=song.url;audio.play().catch(()=>{});
+  state.recent=[song.url,...state.recent.filter(u=>u!==song.url)].slice(0,100);save("recent",state.recent);
+  showNow(song);markCurrent();
+  renderRecentShelf();
+}
+function pickNext(){
+  const queue=state.queue.filter(isPlayable);if(!queue.length)return null;
+  const index=queue.findIndex(s=>s.url===state.current?.url);
+  if(state.shuffle&&queue.length>1){let n;do{n=Math.floor(Math.random()*queue.length)}while(n===index);return queue[n]}
+  if(index+1<queue.length)return queue[index+1];
+  return state.repeat==="all"?queue[0]:null;
+}
+function playNext(){const s=pickNext();if(s)playSong(s)}
+function playPrevious(){
+  if(audio.currentTime>3){audio.currentTime=0;return}
+  const prev=state.history.pop();
+  if(prev)playSong(prev,{skipHistory:true});else audio.currentTime=0;
+}
+function togglePlay(){
+  if(!state.current){const first=visibleSongs()[0];if(first)playSong(first,{queue:visibleSongs()});return}
+  audio.paused?audio.play().catch(()=>{}):audio.pause();
+}
+function updateSeek(){
+  const d=audio.duration;
+  $("cur").textContent=formatTime(audio.currentTime);$("dur").textContent=formatTime(d);
+  if(!isFinite(d)||!d){setFill(seek,0);return}
+  const p=audio.currentTime/d*100;
+  const b=audio.buffered.length?audio.buffered.end(audio.buffered.length-1)/d*100:0;
+  if(!seeking)seek.value=p*10;
+  setFill(seek,seeking?seek.value/10:p,Math.max(b,p));
+}
+
+seek.addEventListener("pointerdown",()=>{seeking=true});
+seek.addEventListener("input",()=>{
+  if(!isFinite(audio.duration))return;
+  const t=seek.value/1000*audio.duration;
+  $("cur").textContent=formatTime(t);setFill(seek,seek.value/10);audio.currentTime=t;
+});
+window.addEventListener("pointerup",()=>{if(seeking){seeking=false;updateSeek()}});
+volume.addEventListener("input",()=>{audio.volume=volume.value/100;setFill(volume,volume.value);save("volume",Number(volume.value))});
+audio.addEventListener("timeupdate",updateSeek);
+audio.addEventListener("progress",updateSeek);
+audio.addEventListener("loadedmetadata",updateSeek);
+audio.addEventListener("play",()=>{document.body.classList.add("playing");setIcon($("toggle"),"pause");$("toggle").setAttribute("aria-label","Pause")});
+audio.addEventListener("pause",()=>{document.body.classList.remove("playing");setIcon($("toggle"),"play");$("toggle").setAttribute("aria-label","Play")});
+audio.addEventListener("ended",()=>{if(stopAfterEnd){clearSleep();statusText.textContent="Sleep timer: stopped after the song.";return}if(state.repeat==="one"){audio.currentTime=0;audio.play()}else playNext()});
+audio.addEventListener("error",()=>{if(state.current)statusText.textContent="Could not play "+state.current.title+". Try again, or delete it and add it again."});
+
+$("toggle").addEventListener("click",togglePlay);
+$("next").addEventListener("click",playNext);
+$("prev").addEventListener("click",playPrevious);
+$("shuffle").addEventListener("click",()=>{state.shuffle=!state.shuffle;$("shuffle").setAttribute("aria-pressed",String(state.shuffle));save("shuffle",state.shuffle)});
+$("repeat").addEventListener("click",()=>{
+  state.repeat={off:"all",all:"one",one:"off"}[state.repeat];
+  const r=$("repeat");r.dataset.mode=state.repeat;r.setAttribute("aria-pressed",String(state.repeat!=="off"));r.setAttribute("aria-label","Repeat "+state.repeat);save("repeat",state.repeat);
+});
+$("search").addEventListener("input",e=>{state.query=e.target.value;renderList()});
+document.addEventListener("keydown",e=>{
+  const typing=e.target.matches("input,textarea,select");
+  if(e.key==="/"&&!typing){e.preventDefault();$("search").focus();return}
+  if(e.key==="Escape"){closeNav()}
+  if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key===" "&&e.target.tagName!=="BUTTON"&&e.target.tagName!=="INPUT"){e.preventDefault();togglePlay()}
+  else if(e.key==="ArrowRight"&&e.target.type!=="range")audio.currentTime+=5;
+  else if(e.key==="ArrowLeft"&&e.target.type!=="range")audio.currentTime-=5;
+  else if(e.key==="n"||e.key==="N")playNext();
+  else if(e.key==="p"||e.key==="P")playPrevious();
+  else if(e.key==="f"||e.key==="F"){if(state.current)toggleFav(state.current)}
+});
+if("mediaSession" in navigator){
+  const actions={play:togglePlay,pause:togglePlay,previoustrack:playPrevious,nexttrack:playNext,seekto:d=>{audio.currentTime=d.seekTime}};
+  for(const [name,handler] of Object.entries(actions)){try{navigator.mediaSession.setActionHandler(name,handler)}catch{}}
+}
+
+async function start(){
+  document.querySelectorAll("[data-icon]").forEach(n=>setIcon(n,n.dataset.icon));
+  const v=load("volume",80);volume.value=v;audio.volume=v/100;setFill(volume,v);setFill(seek,0);
+  state.shuffle=load("shuffle",false);$("shuffle").setAttribute("aria-pressed",String(state.shuffle));
+  state.repeat=load("repeat","off");$("repeat").dataset.mode=state.repeat;$("repeat").setAttribute("aria-pressed",String(state.repeat!=="off"));$("repeat").setAttribute("aria-label","Repeat "+state.repeat);
+  state.favorites=new Set(load("favs",[]));
+  state.recent=load("recent",[]);
+  applySpeed(load("speed",1));
+  paintNowFav();
+  try{
+    const response=await fetch("/api/songs");
+    if(!response.ok)throw new Error("Status "+response.status);
+    state.songs=await response.json();
+  }catch{statusText.textContent="Could not load the song list. Check that the site is deployed and the KV namespace is set (see README.txt).";return}
+  await loadBundledSongs();
+  try{
+    const groupsResponse=await fetch("/api/groups");
+    if(groupsResponse.ok)for(const g of await groupsResponse.json())if(g.image)state.groupImages[g.name]=g.image+"?v="+encodeURIComponent(g.image);
+  }catch{}
+  sortSongs();await loadDownloaded();
+  document.body.classList.toggle("offline",!navigator.onLine);$("offlineNote").hidden=navigator.onLine;
+  renderChips();renderList();refreshGroupList();
+  resumeLastSession();
+  try{const saved=sessionStorage.getItem("mymusic:pw");if(saved)await unlock(saved,true)}catch{}
+}
+
+/* Songs bundled at deploy time from the public/songs folder (list made by make-playlist.mjs). */
+async function loadBundledSongs(){
+  let list;
+  try{
+    const response=await fetch("/songs.json",{cache:"no-cache"});
+    if(!response.ok)return;
+    list=await response.json();
+  }catch{return}
+  if(!Array.isArray(list))return;
+  const known=new Set(state.songs.map(s=>s.url));
+  for(const entry of list){
+    if(!entry||!entry.url||known.has(entry.url))continue;
+    state.songs.push({id:"static:"+entry.url,url:entry.url,title:entry.title||entry.url,group:entry.group||"Other",static:true});
+  }
+}
+
+function sortSongs(){state.songs.sort((a,b)=>a.group.localeCompare(b.group)||a.title.localeCompare(b.title))}
+function refreshGroupList(){
+  const names=[...new Set(state.songs.map(s=>s.group))];
+  $("groupList").replaceChildren(...names.map(n=>{const o=document.createElement("option");o.value=n;return o}));
+}
+
+/* ---- Manage mode: add and delete songs (needs the admin password) ---- */
+let adminPassword=null;
+function setAdmin(on){
+  document.body.classList.toggle("manage",on);
+  $("tools").hidden=!on;$("loginForm").hidden=on;$("manageBtn").querySelector("span").textContent=on?"Lock":"Manage";
+  if(on)$("admin").hidden=false;else adminPassword=null;
+  renderList(); // rows become draggable / show move buttons only in Manage mode
+}
+async function unlock(password,quiet){
+  let response;
+  try{response=await fetch("/api/login",{headers:{Authorization:"Bearer "+password}})}
+  catch{if(!quiet)$("adminMsg").textContent="You are offline. Adding and deleting songs needs internet.";return}
+  if(response.ok){adminPassword=password;try{sessionStorage.setItem("mymusic:pw",password)}catch{}setAdmin(true);$("adminMsg").textContent="";return}
+  try{sessionStorage.removeItem("mymusic:pw")}catch{}
+  if(quiet)return;
+  const body=await response.json().catch(()=>({}));
+  $("adminMsg").textContent=body.error||"Could not unlock. Try again.";
+}
+$("manageBtn").addEventListener("click",()=>{
+  if(adminPassword){setAdmin(false);$("admin").hidden=true;try{sessionStorage.removeItem("mymusic:pw")}catch{}return}
+  $("admin").hidden=!$("admin").hidden;if(!$("admin").hidden){closeNav();$("pw").focus()}
+});
+$("loginForm").addEventListener("submit",e=>{e.preventDefault();unlock($("pw").value);$("pw").value=""});
+$("addBtn").addEventListener("click",()=>$("files").click());
+
+function uploadFile(file,group,onProgress){
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open("POST","/api/songs?title="+encodeURIComponent(file.name.replace(/\.mp3$/i,""))+"&group="+encodeURIComponent(group));
+    xhr.setRequestHeader("Authorization","Bearer "+adminPassword);
+    xhr.upload.onprogress=e=>{if(e.lengthComputable)onProgress(Math.round(e.loaded/e.total*100))};
+    xhr.onload=()=>{let body={};try{body=JSON.parse(xhr.responseText)}catch{}xhr.status===201?resolve(body):reject(new Error(body.error||"Upload failed ("+xhr.status+")"))};
+    xhr.onerror=()=>reject(new Error("Network error"));
+    xhr.send(file);
+  });
+}
+$("files").addEventListener("change",async()=>{
+  const files=[...$("files").files];$("files").value="";
+  const group=$("groupInput").value.trim()||"Other";
+  const failed=[];let added=0;
+  for(const file of files){
+    if(!/\.mp3$/i.test(file.name)){failed.push(file.name+" (not an MP3)");continue}
+    if(file.size>25*1024*1024){failed.push(file.name+" (bigger than 25 MiB)");continue}
+    try{
+      const song=await uploadFile(file,group,p=>{$("adminStatus").textContent="Uploading "+(added+failed.length+1)+" of "+files.length+": "+file.name+" "+p+"%"});
+      state.songs.push(song);added++;
+    }catch(error){failed.push(file.name+" ("+error.message+")")}
+  }
+  sortSongs();renderChips();renderList();refreshGroupList();
+  $("adminStatus").textContent="Added "+added+" of "+files.length+(failed.length?". Failed: "+failed.join(", "):".");
+});
+/* ---- Move songs between groups (Manage mode) ---- */
+let moveSongPending=null;
+function openMoveDialog(song){
+  moveSongPending=song;
+  $("moveName").textContent=song.title+" (now in "+song.group+")";
+  const input=$("moveInput");input.value=song.group;
+  $("moveDlg").showModal();
+  input.select();
+}
+$("moveDlg").addEventListener("close",()=>{
+  if($("moveDlg").returnValue!=="ok"||!moveSongPending)return;
+  const group=$("moveInput").value.trim();
+  if(group)moveSongToGroup(moveSongPending,group);
+  moveSongPending=null;
+});
+async function moveSongToGroup(song,group){
+  if(song.static){$("adminMsg").textContent='"'+song.title+'" comes from the public/songs folder. Put the file in a subfolder (for example public/songs/'+group.replace(/\//g,"-")+'/) and run npm run deploy again.';return}
+  if(!adminPassword){$("adminMsg").textContent="Unlock Manage mode first to move songs.";return}
+  if(song.group===group)return;
+  let response;
+  try{response=await fetch("/api/songs/"+song.id+"?group="+encodeURIComponent(group),{method:"PATCH",headers:{Authorization:"Bearer "+adminPassword}})}
+  catch{$("adminMsg").textContent="You are offline. Moving songs needs internet.";return}
+  if(!response.ok){const body=await response.json().catch(()=>({}));$("adminMsg").textContent=body.error||"Could not move the song. Lock, unlock again, and retry.";return}
+  song.group=group;
+  if(state.current&&state.current.id===song.id){state.current.group=group;$("nowGroup").textContent=group}
+  if(!state.songs.some(s=>s.group===state.group))state.group="All";
+  sortSongs();renderChips();renderList();refreshGroupList();
+  $("adminMsg").textContent='Moved "'+song.title+'" to '+group+".";
+}
+
+/* ---- Group images (Manage mode) ---- */
+let imageGroupPending=null;
+function pickGroupImage(name){
+  imageGroupPending=name;
+  $("imgFile").click();
+}
+$("imgFile").addEventListener("change",async()=>{
+  const file=$("imgFile").files[0];$("imgFile").value="";
+  const name=imageGroupPending;imageGroupPending=null;
+  if(!file||!name)return;
+  if(file.size>2*1024*1024){$("adminMsg").textContent="The image is bigger than 2 MiB. Pick a smaller one.";return}
+  let response;
+  try{response=await fetch("/api/group-image?group="+encodeURIComponent(name),{method:"PUT",headers:{Authorization:"Bearer "+adminPassword,"Content-Type":file.type},body:file})}
+  catch{$("adminMsg").textContent="You are offline. Setting group images needs internet.";return}
+  const body=await response.json().catch(()=>({}));
+  if(!response.ok){$("adminMsg").textContent=body.error||"Could not set the image. Try again.";return}
+  state.groupImages[name]=body.image+"?v="+encodeURIComponent(body.image);
+  renderList();renderChips();
+  if(state.current&&state.current.group===name)showNow(state.current);
+  $("adminMsg").textContent="Image set for "+name+".";
+});
+async function removeGroupImage(name){
+  let response;
+  try{response=await fetch("/api/group-image?group="+encodeURIComponent(name),{method:"DELETE",headers:{Authorization:"Bearer "+adminPassword}})}
+  catch{$("adminMsg").textContent="You are offline. Removing group images needs internet.";return}
+  if(!response.ok){$("adminMsg").textContent="Could not remove the image. Try again.";return}
+  delete state.groupImages[name];
+  renderList();renderChips();
+  if(state.current&&state.current.group===name)showNow(state.current);
+  $("adminMsg").textContent="Image removed for "+name+".";
+}
+
+/* ---- Rename a group (Manage mode) ---- */
+let renamePending=null;
+function openRenameDialog(name){
+  renamePending=name;
+  $("renameName").textContent='Rename "'+name+'". Songs and the group image move to the new name.';
+  $("renameInput").value=name;
+  $("renameDlg").showModal();
+  $("renameInput").select();
+}
+$("renameDlg").addEventListener("close",()=>{
+  if($("renameDlg").returnValue!=="ok"||!renamePending)return;
+  const to=$("renameInput").value.trim();
+  const from=renamePending;renamePending=null;
+  if(!to||to===from)return;
+  renameGroup(from,to);
+});
+async function renameGroup(from,to){
+  if(!adminPassword){$("adminMsg").textContent="Unlock Manage mode first to rename groups.";return}
+  let response;
+  try{response=await fetch("/api/groups?from="+encodeURIComponent(from)+"&to="+encodeURIComponent(to),{method:"PATCH",headers:{Authorization:"Bearer "+adminPassword}})}
+  catch{$("adminMsg").textContent="You are offline. Renaming groups needs internet.";return}
+  if(!response.ok){const body=await response.json().catch(()=>({}));$("adminMsg").textContent=body.error||"Could not rename the group. Lock, unlock again, and retry.";return}
+  const movable=state.songs.filter(s=>s.group===from&&!s.static);
+  const stuck=state.songs.some(s=>s.group===from&&s.static);
+  for(const s of movable)s.group=to;
+  if(state.groupImages[from]){state.groupImages[to]=state.groupImages[from];delete state.groupImages[from]}
+  if(state.group===from)state.group=to;
+  if(state.current&&state.current.group===from){state.current.group=to;$("nowGroup").textContent=to}
+  sortSongs();renderChips();renderList();refreshGroupList();
+  $("adminMsg").textContent='Renamed "'+from+'" to "'+to+'".'+(stuck?" Songs from the public/songs folder stay in \""+from+'" — move their files on your computer and deploy again.':"");
+}
+
+/* ---- Favorites (kept on this device) ---- */
+function isFav(song){return state.favorites.has(song.url)}
+function toggleFav(song){
+  if(state.favorites.has(song.url))state.favorites.delete(song.url);
+  else state.favorites.add(song.url);
+  save("favs",[...state.favorites]);
+  renderChips();renderList();
+  paintNowFav();
+}
+function paintNowFav(){
+  const b=$("favBtn");
+  const on=!!state.current&&state.favorites.has(state.current.url);
+  b.classList.toggle("on",on);
+  b.setAttribute("aria-pressed",String(on));
+  b.disabled=!state.current;
+}
+$("favBtn").addEventListener("click",()=>{if(state.current)toggleFav(state.current)});
+
+/* ---- Playback speed ---- */
+const SPEEDS=[0.75,1,1.25,1.5,2];
+function applySpeed(rate){
+  state.speed=rate;audio.playbackRate=rate;
+  $("speedBtn").textContent=rate+"×";
+  save("speed",rate);
+}
+$("speedBtn").addEventListener("click",()=>{
+  const i=SPEEDS.indexOf(state.speed);
+  applySpeed(SPEEDS[(i+1)%SPEEDS.length]);
+});
+audio.addEventListener("loadedmetadata",()=>{audio.playbackRate=state.speed});
+
+/* ---- Sleep timer ---- */
+let sleepUntil=0,sleepTick=null,stopAfterEnd=false;
+function paintSleep(){
+  const b=$("sleepBtn");
+  b.classList.toggle("on",!!sleepUntil||stopAfterEnd);
+  b.dataset.min=sleepUntil?String(Math.max(1,Math.ceil((sleepUntil-Date.now())/60000))):"";
+  b.setAttribute("aria-label",sleepUntil?"Sleep timer: about "+b.dataset.min+" minutes left":stopAfterEnd?"Sleep timer: after this song":"Sleep timer");
+}
+function clearSleep(){
+  sleepUntil=0;stopAfterEnd=false;
+  if(sleepTick){clearInterval(sleepTick);sleepTick=null}
+  paintSleep();
+}
+function setSleepMinutes(minutes){
+  clearSleep();
+  sleepUntil=Date.now()+minutes*60000;
+  sleepTick=setInterval(()=>{
+    if(Date.now()>=sleepUntil){clearSleep();audio.pause();statusText.textContent="Sleep timer: music stopped. Good night."}
+    else paintSleep();
+  },10000);
+  paintSleep();
+}
+$("sleepBtn").addEventListener("click",()=>{
+  $("sleepInfo").textContent=sleepUntil?"Active: about "+Math.max(1,Math.ceil((sleepUntil-Date.now())/60000))+" min left.":stopAfterEnd?"Active: stops after the current song.":"Music stops when the timer ends.";
+  $("sleepDlg").showModal();
+});
+$("sleepDlg").addEventListener("close",()=>{
+  const value=$("sleepDlg").returnValue;
+  if(value==="end"){clearSleep();stopAfterEnd=true;paintSleep()}
+  else if(value==="off"||!value)clearSleep();
+  else setSleepMinutes(Number(value));
+});
+
+/* ---- Remember where you left off ---- */
+let lastSaveAt=0;
+audio.addEventListener("timeupdate",()=>{
+  if(state.current&&audio.currentTime>1&&Date.now()-lastSaveAt>5000){
+    lastSaveAt=Date.now();
+    save("last",{url:state.current.url,time:audio.currentTime});
+  }
+});
+window.addEventListener("pagehide",()=>{
+  if(state.current&&audio.currentTime>1)save("last",{url:state.current.url,time:audio.currentTime});
+});
+function resumeLastSession(){
+  const last=load("last",null);
+  if(!last)return;
+  const song=state.songs.find(s=>s.url===last.url);
+  if(!song)return;
+  state.current=song;state.queue=state.songs;
+  audio.src=song.url;
+  const t=last.time||0;
+  audio.addEventListener("loadedmetadata",()=>{try{if(isFinite(t))audio.currentTime=Math.min(t,359999)}catch{}},{once:true});
+  showNow(song);markCurrent();
+  statusText.textContent="Picked up where you left off: "+song.title+". Press play to continue.";
+}
+
+async function deleteSong(song){
+  if(song.static){$("adminMsg").textContent='"'+song.title+'" comes from the public/songs folder. Delete the file on your computer and run npm run deploy again.';return}
+  if(!confirm('Delete "'+song.title+'"? This cannot be undone.'))return;
+  let response;
+  try{response=await fetch(song.url,{method:"DELETE",headers:{Authorization:"Bearer "+adminPassword}})}
+  catch{$("adminMsg").textContent="You are offline. Adding and deleting songs needs internet.";return}
+  if(!response.ok){$("adminMsg").textContent="Could not delete. Lock, unlock again, and retry.";return}
+  try{await (await caches.open("songs")).delete(song.url)}catch{}
+  state.downloaded.delete(song.url);
+  state.favorites.delete(song.url);
+  state.recent=state.recent.filter(u=>u!==song.url);save("recent",state.recent);
+  state.songs=state.songs.filter(s=>s.id!==song.id);
+  state.queue=state.queue.filter(s=>s.id!==song.id);
+  state.history=state.history.filter(s=>s.id!==song.id);
+  if(state.current&&state.current.id===song.id){
+    state.current=null;audio.pause();audio.removeAttribute("src");audio.load();
+    $("nowTitle").textContent="Nothing playing";$("nowGroup").textContent="Pick a song";document.title="My songs";
+    paintNowFav();
+  }
+  if(!state.songs.some(s=>s.group===state.group))state.group="All";
+  renderChips();renderList();refreshGroupList();
+}
+/* ---- Offline: download songs to this device (like Spotify) ---- */
+const SONG_CACHE="songs";
+const downloading=new Map();
+function formatMB(bytes){return (bytes/1048576).toFixed(bytes<10485760?1:0)+" MB"}
+async function loadDownloaded(){
+  if(!("caches" in window))return;
+  try{
+    const cache=await caches.open(SONG_CACHE);
+    const known=new Set(state.songs.map(s=>s.url));
+    for(const request of await cache.keys()){
+      const path=new URL(request.url).pathname;
+      if(known.has(path))state.downloaded.add(path);
+      else if(navigator.onLine)await cache.delete(path);
+    }
+  }catch{}
+}
+function updateStatusRow(songs){
+  const saved=state.songs.filter(s=>state.downloaded.has(s.url));
+  let text=songs.length+(songs.length===1?" song":" songs");
+  if(saved.length)text+=", "+saved.length+" downloaded ("+formatMB(saved.reduce((sum,s)=>sum+(s.size||0),0))+")";
+  statusText.textContent=text;
+  $("dlAll").hidden=!navigator.onLine||state.group==="Downloaded"||!songs.some(s=>!state.downloaded.has(s.url));
+}
+function paintDownloads(){
+  list.querySelectorAll(".row").forEach(row=>{
+    const button=row.querySelector(".song"),dl=row.querySelector(".dl"),url=dl.dataset.url;
+    const title=button.querySelector(".title").childNodes[0].textContent;
+    button.dataset.ready=String(navigator.onLine||state.downloaded.has(url));
+    dl.replaceChildren();dl.classList.toggle("on",state.downloaded.has(url));
+    if(downloading.has(url)){dl.append(el("span","pct",downloading.get(url)+"%"));dl.setAttribute("aria-label","Downloading "+title)}
+    else if(state.downloaded.has(url)){setIcon(dl,"done");dl.setAttribute("aria-label","Downloaded. Tap to remove "+title+" from this device")}
+    else{setIcon(dl,"download");dl.setAttribute("aria-label","Download "+title+" for offline use")}
+  });
+}
+async function downloadSong(song){
+  if(downloading.has(song.url))return;
+  downloading.set(song.url,0);paintDownloads();
+  let failure="";
+  try{
+    const response=await fetch(song.url);
+    if(!response.ok)throw new Error("Status "+response.status);
+    const total=Number(response.headers.get("Content-Length"))||song.size||0;
+    const reader=response.body.getReader();const chunks=[];let received=0;
+    for(;;){
+      const {done,value}=await reader.read();if(done)break;
+      chunks.push(value);received+=value.length;
+      if(total){downloading.set(song.url,Math.min(100,Math.round(received/total*100)));paintDownloads()}
+    }
+    const blob=new Blob(chunks,{type:"audio/mpeg"});
+    const cache=await caches.open(SONG_CACHE);
+    await cache.put(song.url,new Response(blob,{headers:{"Content-Type":"audio/mpeg","Content-Length":String(blob.size)}}));
+    state.downloaded.add(song.url);
+    if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+  }catch(error){
+    failure=error&&error.name==="QuotaExceededError"?"Not enough space on this device for "+song.title+".":"Could not download "+song.title+". Check your internet and try again.";
+  }
+  downloading.delete(song.url);renderChips();renderList();
+  if(failure)statusText.textContent=failure;
+}
+async function removeDownload(song){
+  try{await (await caches.open(SONG_CACHE)).delete(song.url)}catch{}
+  state.downloaded.delete(song.url);renderChips();renderList();
+}
+function toggleDownload(song){
+  if(downloading.has(song.url))return;
+  if(state.downloaded.has(song.url))return removeDownload(song);
+  if(!navigator.onLine){statusText.textContent="You are offline. Connect to the internet to download songs.";return}
+  return downloadSong(song);
+}
+$("dlAll").addEventListener("click",async()=>{
+  for(const song of visibleSongs()){
+    if(!navigator.onLine)break;
+    if(!state.downloaded.has(song.url))await downloadSong(song);
+  }
+});
+function updateOnline(){document.body.classList.toggle("offline",!navigator.onLine);$("offlineNote").hidden=navigator.onLine;renderList()}
+window.addEventListener("online",updateOnline);
+window.addEventListener("offline",updateOnline);
+
+/* ---- Install as an app ---- */
+let installPrompt=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;$("installBtn").hidden=false});
+$("installBtn").addEventListener("click",async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$("installBtn").hidden=true});
+window.addEventListener("appinstalled",()=>{$("installBtn").hidden=true});
+if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
+
+start();
+</script>
