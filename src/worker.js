@@ -13,6 +13,7 @@
 
 const MAX_SONG_BYTES = 25 * 1024 * 1024; // KV value limit: 25 MiB
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // group images: 2 MiB is plenty
+const SMALL_RANGE_BYTES = 512 * 1024;    // buffer small chunks (<= 512 KiB) for exact Content-Length
 const SONG_PREFIX = "song:";
 const GROUP_IMG_PREFIX = "groupimg:";
 const INDEX_KEY = "index";
@@ -39,7 +40,6 @@ function safeEqual(a, b) {
   return diff === 0;
 }
 
-// Returns an error Response if the request is not from the admin, otherwise null.
 function checkAdmin(request, env) {
   if (!env.ADMIN_PASSWORD) return json({ error: "ADMIN_PASSWORD is not set yet (see README.txt)" }, 500);
   const given = (request.headers.get("Authorization") || "").replace(/^Bearer /, "");
@@ -86,30 +86,162 @@ function parseRange(header, size) {
   return { start, end };
 }
 
-async function streamSong(request, env, id) {
-  const data = await env.SONGS.get(SONG_PREFIX + id, "arrayBuffer");
-  if (!data) return json({ error: "Song not found" }, 404);
+// Read only [start, end] from a ReadableStream into a compact Uint8Array, then cancel upstream.
+async function readStreamRange(source, start, end) {
+  const length = end - start + 1;
+  const out = new Uint8Array(length);
+  const reader = source.getReader();
+  let pos = 0;
+  let written = 0;
+  try {
+    while (written < length) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || !value.byteLength) continue;
+      const chunkStart = pos;
+      const chunkEnd = pos + value.byteLength;
+      pos = chunkEnd;
+      if (chunkEnd <= start) continue;
+      const sliceFrom = Math.max(0, start - chunkStart);
+      const sliceTo = Math.min(value.byteLength, end + 1 - chunkStart);
+      if (sliceTo > sliceFrom) {
+        out.set(value.subarray(sliceFrom, sliceTo), written);
+        written += sliceTo - sliceFrom;
+      }
+    }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+  return written === length ? out : out.subarray(0, written);
+}
 
-  const size = data.byteLength;
+// Stream [start, end] with constant memory (used for large ranges > 512 KiB).
+function sliceStream(source, start, end) {
+  const reader = source.getReader();
+  let pos = 0;
+  return new ReadableStream({
+    async pull(controller) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.close();
+          return;
+        }
+        if (!value || !value.byteLength) continue;
+        const chunkStart = pos;
+        const chunkEnd = pos + value.byteLength;
+        pos = chunkEnd;
+        if (chunkEnd <= start) continue;
+
+        const sliceFrom = Math.max(0, start - chunkStart);
+        const sliceTo = Math.min(value.byteLength, end + 1 - chunkStart);
+        if (sliceTo > sliceFrom) {
+          controller.enqueue(value.subarray(sliceFrom, sliceTo));
+        }
+        if (chunkEnd > end) {
+          reader.cancel().catch(() => {});
+          controller.close();
+          return;
+        }
+        return;
+      }
+    },
+    cancel(reason) {
+      return reader.cancel(reason).catch(() => {});
+    },
+  });
+}
+
+async function streamSong(request, env, id) {
+  const { value: stream, metadata } = await env.SONGS.getWithMetadata(SONG_PREFIX + id, {
+    type: "stream",
+    cacheTtl: 3600,
+  });
+  if (!stream) return json({ error: "Song not found" }, 404);
+
+  let size = metadata && typeof metadata.size === "number" ? metadata.size : null;
+  if (size === null) {
+    const songs = await readIndex(env);
+    const entry = songs.find((s) => s.id === id);
+    if (entry && typeof entry.size === "number") size = entry.size;
+  }
+
   const headers = new Headers({
     "Content-Type": "audio/mpeg",
     "Accept-Ranges": "bytes",
-    "Cache-Control": "public, max-age=3600",
+    "ETag": `"${id}"`,
+    "Cache-Control": "public, max-age=86400, immutable",
   });
+
+  // Fallback only if an old song somehow has no recorded size anywhere.
+  if (size === null) {
+    const data = await new Response(stream).arrayBuffer();
+    size = data.byteLength;
+    const range = parseRange(request.headers.get("Range"), size);
+    if (range === "invalid") {
+      headers.set("Content-Range", `bytes */${size}`);
+      return new Response(null, { status: 416, headers });
+    }
+    if (range === null) {
+      headers.set("Content-Length", String(size));
+      return new Response(request.method === "HEAD" ? null : data, { status: 200, headers });
+    }
+    const len = range.end - range.start + 1;
+    headers.set("Content-Range", `bytes ${range.start}-${range.end}/${size}`);
+    headers.set("Content-Length", String(len));
+    const body = request.method === "HEAD" ? null : new Uint8Array(data, range.start, len);
+    return new Response(body, { status: 206, headers });
+  }
 
   const range = parseRange(request.headers.get("Range"), size);
   if (range === "invalid") {
+    stream.cancel().catch(() => {});
     headers.set("Content-Range", `bytes */${size}`);
     return new Response(null, { status: 416, headers });
   }
+
+  if (request.method === "HEAD") {
+    stream.cancel().catch(() => {});
+    if (range === null) {
+      headers.set("Content-Length", String(size));
+      return new Response(null, { status: 200, headers });
+    }
+    headers.set("Content-Range", `bytes ${range.start}-${range.end}/${size}`);
+    headers.set("Content-Length", String(range.end - range.start + 1));
+    return new Response(null, { status: 206, headers });
+  }
+
   if (range === null) {
     headers.set("Content-Length", String(size));
-    return new Response(data, { status: 200, headers });
+    return new Response(stream, { status: 200, headers });
   }
-  const part = data.slice(range.start, range.end + 1);
+
+  const length = range.end - range.start + 1;
+
+  // Full-file range (e.g. "bytes=0-"): stream directly with zero copying.
+  if (range.start === 0 && range.end === size - 1) {
+    headers.set("Content-Range", `bytes 0-${size - 1}/${size}`);
+    headers.set("Content-Length", String(size));
+    return new Response(stream, { status: 206, headers });
+  }
+
+  // Small range (e.g. 60 KB chunks or Safari 0-1 probe): read exact slice with minimal RAM.
+  if (length <= SMALL_RANGE_BYTES) {
+    const part = await readStreamRange(stream, range.start, range.end);
+    if (!part.byteLength) {
+      headers.set("Content-Range", `bytes */${size}`);
+      return new Response(null, { status: 416, headers });
+    }
+    const actualEnd = range.start + part.byteLength - 1;
+    headers.set("Content-Range", `bytes ${range.start}-${actualEnd}/${size}`);
+    headers.set("Content-Length", String(part.byteLength));
+    return new Response(part, { status: 206, headers });
+  }
+
+  // Large partial range (e.g. seeking mid-song): stream with constant memory.
   headers.set("Content-Range", `bytes ${range.start}-${range.end}/${size}`);
-  headers.set("Content-Length", String(part.byteLength));
-  return new Response(part, { status: 206, headers });
+  headers.set("Content-Length", String(length));
+  return new Response(sliceStream(stream, range.start, range.end), { status: 206, headers });
 }
 
 async function addSong(request, env, url) {
@@ -128,7 +260,7 @@ async function addSong(request, env, url) {
   if (data.byteLength > MAX_SONG_BYTES) return json({ error: "File is bigger than 25 MiB" }, 413);
 
   const id = crypto.randomUUID();
-  await env.SONGS.put(SONG_PREFIX + id, data);
+  await env.SONGS.put(SONG_PREFIX + id, data, { metadata: { size: data.byteLength } });
   const song = { id, title, group, size: data.byteLength, url: `/api/songs/${id}` };
   const songs = await readIndex(env);
   songs.push(song);
@@ -136,7 +268,6 @@ async function addSong(request, env, url) {
   return json(song, 201);
 }
 
-// Move a song to another group. Only the small index entry changes; the MP3 stays where it is.
 async function moveSong(request, env, url, id) {
   const denied = checkAdmin(request, env);
   if (denied) return denied;
@@ -163,7 +294,6 @@ async function deleteSong(request, env, id) {
   return json({ ok: true });
 }
 
-// Rename a group: every song in "from" moves to "to", and the group image follows.
 async function renameGroup(request, env, url) {
   const denied = checkAdmin(request, env);
   if (denied) return denied;
@@ -192,13 +322,10 @@ async function renameGroup(request, env, url) {
   return json({ ok: true, renamed });
 }
 
-// List every group with its image URL, so the page can show covers.
 async function listGroups(env) {
   const songs = await readIndex(env);
   const images = await readGroupImages(env);
   const names = [...new Set(songs.map((song) => song.group))];
-  // Keep images for groups that no longer songs belong to? No: they stay in KV until replaced,
-  // but the list only shows groups that exist.
   return json(names.map((name) => ({ name, image: images[name] ? `/api/group-image/${images[name].id}` : null })));
 }
 
@@ -206,7 +333,7 @@ async function getGroupImage(env, id) {
   const images = await readGroupImages(env);
   const entry = Object.values(images).find((image) => image.id === id);
   if (!entry) return json({ error: "Image not found" }, 404);
-  const data = await env.SONGS.get(GROUP_IMG_PREFIX + id, "arrayBuffer");
+  const data = await env.SONGS.get(GROUP_IMG_PREFIX + id, { type: "arrayBuffer", cacheTtl: 3600 });
   if (!data) return json({ error: "Image not found" }, 404);
   return new Response(data, {
     headers: {
@@ -233,7 +360,7 @@ async function setGroupImage(request, env, url) {
 
   const images = await readGroupImages(env);
   const old = images[group];
-  if (old) await env.SONGS.delete(GROUP_IMG_PREFIX + old.id); // replace: remove the old file
+  if (old) await env.SONGS.delete(GROUP_IMG_PREFIX + old.id);
 
   const id = crypto.randomUUID();
   await env.SONGS.put(GROUP_IMG_PREFIX + id, data);

@@ -1,5 +1,5 @@
 // Service worker: makes the app open without internet and plays downloaded songs offline.
-const SHELL = "shell-v6";   // the page, the song list, icons. Change the number to force an update.
+const SHELL = "shell-v9";   // the page, the song list, icons. Change the number to force an update.
 const SONGS = "songs";      // downloaded songs live here. This cache is never deleted automatically.
 const SHELL_FILES = ["/", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/icon-512.png"];
 
